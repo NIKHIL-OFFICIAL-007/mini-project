@@ -1,0 +1,13 @@
+How to Prevent XAMPP Dashboard from Loading
+Open XAMPP Control Panel
+Go to Apache → Config → Apache (httpd.conf)
+Find this line:
+
+DocumentRoot "C:/xampp/htdocs"
+
+Make sure it points to your project folder:
+
+DocumentRoot "C:/xampp/htdocs/vehicle-parts-marketplace"
+
+Save and restart Apache
+✅ Now http://localhost/ will show your site, not XAMPP dashboard
