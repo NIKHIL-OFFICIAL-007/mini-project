@@ -1,0 +1,323 @@
+-- Create Database
+CREATE DATABASE IF NOT EXISTS vehicle_parts_db;
+USE vehicle_parts_db;
+
+-- Table 1: users
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `role` varchar(50) DEFAULT 'buyer',
+  `role_status` varchar(20) DEFAULT 'approved',
+  `password` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE CURRENT_TIMESTAMP(),
+  `profile_picture` varchar(255) DEFAULT 'default.png',
+  `phone` varchar(20) DEFAULT NULL,
+  `address` text DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- Table 2: categories
+CREATE TABLE `categories` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL,
+  `status` enum('active', 'inactive') DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- Table 3: parts
+CREATE TABLE `parts` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `category_id` int(11) NOT NULL,
+  `description` text DEFAULT NULL,
+  `price` decimal(10,2) NOT NULL,
+  `stock_quantity` int(11) NOT NULL,
+  `image_url` varchar(512) DEFAULT NULL,
+  `seller_id` int(11) NOT NULL,
+  `status` enum('active', 'hidden') DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `category_id` (`category_id`),
+  KEY `seller_id` (`seller_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- Table 4: cart_items
+CREATE TABLE `cart_items` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `buyer_id` int(11) DEFAULT NULL,
+  `product_id` int(11) DEFAULT NULL,
+  `quantity` int(11) DEFAULT '1',
+  `added_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `buyer_id` (`buyer_id`),
+  KEY `product_id` (`product_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- Table 5: notifications
+CREATE TABLE `notifications` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `message` text NOT NULL,
+  `type` varchar(50) NOT NULL,
+  `is_read` tinyint(1) DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- Table 6: orders
+CREATE TABLE orders (
+  id int(11) NOT NULL AUTO_INCREMENT,
+  buyer_id int(11) NOT NULL,
+  seller_id int(11) NULL,
+  total_amount decimal(10,2) NOT NULL,
+  status enum('pending', 'processing', 'shipped', 'delivered', 'cancelled') DEFAULT 'pending',
+  cancelled_by enum('buyer', 'seller', 'support') NULL,
+  cancellation_reason text NULL,
+  cancelled_at timestamp NULL,
+  shipping_name varchar(100) NOT NULL,
+  shipping_email varchar(100) NOT NULL,
+  shipping_phone varchar(20) NOT NULL,
+  shipping_address text NOT NULL,
+  shipping_city varchar(50) NOT NULL,
+  shipping_state varchar(50) NOT NULL,
+  shipping_zip_code varchar(10) NOT NULL,
+  shipping_country varchar(50) NOT NULL,
+  created_at timestamp NOT NULL DEFAULT current_timestamp(),
+  updated_at timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (id),
+  KEY buyer_id (buyer_id),
+  KEY seller_id (seller_id),
+  CONSTRAINT fk_orders_seller FOREIGN KEY (seller_id) REFERENCES users (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Table 7: order_items
+CREATE TABLE order_items (
+  id int(11) NOT NULL AUTO_INCREMENT,
+  order_id int(11) NOT NULL,
+  part_id int(11) NOT NULL,
+  seller_id int(11) NULL,
+  quantity int(11) NOT NULL,
+  price decimal(10,2) NOT NULL,
+  PRIMARY KEY (id),
+  KEY order_id (order_id),
+  KEY part_id (part_id),
+  KEY seller_id (seller_id),
+  CONSTRAINT fk_order_items_seller FOREIGN KEY (seller_id) REFERENCES users (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Table 8: order_status_history
+CREATE TABLE order_status_history (
+  id int(11) NOT NULL AUTO_INCREMENT,
+  order_id int(11) NOT NULL,
+  status enum('pending', 'processing', 'shipped', 'delivered', 'cancelled') NOT NULL,
+  changed_by int(11) NOT NULL COMMENT 'user_id who changed the status',
+  changed_by_role enum('buyer', 'seller', 'support') NOT NULL,
+  notes text DEFAULT NULL,
+  created_at timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (id),
+  KEY order_id (order_id),
+  KEY changed_by (changed_by),
+  CONSTRAINT fk_order_status_order FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE,
+  CONSTRAINT fk_order_status_user FOREIGN KEY (changed_by) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- Table 9: wishlists
+CREATE TABLE `wishlists` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `part_id` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_user_part` (`user_id`, `part_id`),
+  KEY `part_id` (`part_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- Table 10: reviews
+CREATE TABLE `reviews` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `part_id` int(11) NOT NULL,
+  `buyer_id` int(11) NOT NULL,
+  `rating` tinyint(4) NOT NULL,
+  `comment` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `status` enum('active', 'hidden', 'reported') DEFAULT 'active',
+  PRIMARY KEY (`id`),
+  KEY `part_id` (`part_id`),
+  KEY `buyer_id` (`buyer_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- Table 11: tickets
+CREATE TABLE `tickets` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `subject` varchar(255) NOT NULL,
+  `message` text NOT NULL,
+  `category` varchar(50) NOT NULL DEFAULT 'other',
+  `status` enum('open', 'in_progress', 'resolved', 'closed') DEFAULT 'open',
+  `priority` enum('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `sender_role` enum('buyer', 'seller', 'support') DEFAULT 'buyer',
+  `created_by_role` varchar(50) NOT NULL,
+  `resolved_at` datetime DEFAULT NULL,
+  `resolved_by` int(10) UNSIGNED DEFAULT NULL,
+  `closed_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  KEY `status` (`status`),
+  KEY `priority` (`priority`),
+  KEY `sender_role` (`sender_role`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- Table 12: ticket_replies
+CREATE TABLE `ticket_replies` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `ticket_id` int(11) NOT NULL,
+  `sender_id` int(11) NOT NULL,
+  `sender_role` enum('buyer', 'seller', 'support') NOT NULL,
+  `message` text NOT NULL,
+  `is_read` tinyint(1) DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `is_system` tinyint(1) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `ticket_id` (`ticket_id`),
+  KEY `sender_id` (`sender_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- Table 13: admin_logs
+CREATE TABLE `admin_logs` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `admin_id` int(11) NOT NULL,
+  `action` varchar(50) NOT NULL,
+  `target_user_id` int(11) NOT NULL,
+  `details` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `admin_id` (`admin_id`),
+  KEY `target_user_id` (`target_user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- Table 14: account_deletion_requests
+CREATE TABLE `account_deletion_requests` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `requested_at` datetime DEFAULT current_timestamp(),
+  `status` enum('pending', 'approved', 'rejected') DEFAULT 'pending',
+  `processed_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- Table 15: deleted_users_archive
+CREATE TABLE `deleted_users_archive` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `original_user_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `role` varchar(100) NOT NULL,
+  `deletion_date` datetime NOT NULL,
+  `deleted_by_admin_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_deletion_date` (`deletion_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- Table 16: settings
+CREATE TABLE `settings` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `site_name` varchar(255) NOT NULL,
+  `contact_email` varchar(255) NOT NULL,
+  `phone` varchar(50) NOT NULL,
+  `address` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- Table 17: admin_applications
+CREATE TABLE `admin_applications` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) UNSIGNED NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `phone` varchar(50) DEFAULT NULL,
+  `reason` text NOT NULL,
+  `experience` text DEFAULT NULL,
+  `status` enum('pending', 'approved', 'rejected') DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- Table 18: seller_applications
+CREATE TABLE `seller_applications` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `phone` varchar(50) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `business_address` text NOT NULL,
+  `website` varchar(255) DEFAULT NULL,
+  `business_license` varchar(255) DEFAULT NULL,
+  `role_reason` text NOT NULL,
+  `status` enum('pending', 'approved', 'rejected') DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- Table 19: support_applications
+CREATE TABLE `support_applications` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `phone` varchar(20) NOT NULL,
+  `experience` text NOT NULL,
+  `availability` varchar(255) NOT NULL,
+  `reason` text NOT NULL,
+  `resume_filename` varchar(255) DEFAULT NULL,
+  `additional_info` text DEFAULT NULL,
+  `status` enum('pending', 'approved', 'rejected') DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+-- Table 20: product_alerts
+CREATE TABLE product_alerts (
+    alert_id INT(11) NOT NULL AUTO_INCREMENT,
+    user_id INT(11) NOT NULL,
+    part_id INT(11) NOT NULL,
+    status ENUM('pending', 'notified') NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (alert_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (part_id) REFERENCES parts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
